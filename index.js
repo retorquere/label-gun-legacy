@@ -51,7 +51,7 @@ app.post('/comment', githubMiddleware, coroute(function* (req, res, next) {
 
   const awaiting = 'awaiting feedback from user'
 
-	if (owners.includes(payload.sender.login)) {
+  if (owners.includes(payload.sender.login)) {
     if (!payload.issue.labels.includes(awaiting)) {
       yield github({
         uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels`,
@@ -68,7 +68,7 @@ app.post('/comment', githubMiddleware, coroute(function* (req, res, next) {
     }
   }
 
-	res.status(200).send({ success: true })
+  res.status(200).send({ success: true })
 }));
 
 app.listen(app.get('port'), function() {
