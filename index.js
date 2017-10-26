@@ -41,7 +41,7 @@ app.get('/', function(request, response) {
 });
 
 app.post('/comment', githubMiddleware, coroute(function* (req, res, next) {
-  if (req.headers['x-github-event'] == 'ping') return res.status(200).end();
+  if (req.headers['x-github-event'] == 'ping') return res.status(200).send({ success: true });
   if (req.headers['x-github-event'] != 'issue_comment') throw new Error(`Did not expect ${req.headers['x-github-event']}`);
 
   var payload = req.body;
