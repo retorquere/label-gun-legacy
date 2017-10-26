@@ -1,13 +1,14 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+// const bodyParser = require('body-parser');
 const coroute = require('co-express');
 const coroutine = require('bluebird').coroutine;
-const request = require('request-promise')
+const request = require('request-promise');
+const _ = require('lodash');
 
 const app = express();
 const owners = process.env.OWNERS.split(',');
 
-const github = coroutine(function* (req, repo) {
+const github = coroutine(function* (req) {
   req = _.merge({
     json: true,
     headers: {
@@ -15,12 +16,17 @@ const github = coroutine(function* (req, repo) {
       Authorization: `token ${process.env.GITHUB_TOKEN}`,
     },
   }, req)
-  req.uri = `https://api.github.com/repos/${repo}${req.uri}`
+  req.uri = `https://api.github.com/repos/${req.uri}`
 
   return yield request(req)
 })
 
-app.use(bodyParser.json())
+const githubMiddleware = require('github-webhook-middleware')({
+  secret: process.env.SECRET,
+  limit: '1mb', // <-- optionally include the webhook json payload size limit, useful if you have large merge commits. Default is '100kb'
+})
+// app.use(bodyParser.json())
+// app.use(bodyParser.text())
 
 app.set('port', (process.env.PORT || 5000));
 
@@ -34,30 +40,31 @@ app.get('/', function(request, response) {
   response.render('pages/index');
 });
 
-app.post('/comment', coroute(function* (req, res, next) {
+app.post('/comment', githubMiddleware, coroute(function* (req, res, next) {
+  if (req.headers['x-github-event'] != 'issue_comment') throw new Error(`Did not expect ${req.headers['x-github-event']}`);
+
   var payload = req.body;
 
-  if (payload.hook.config.secret != process.env.SECRET) {
-    console.log('secret: got', payload.hook.config.secret.substring(0, 3), payload.hook.config.secret.length);
-    throw new Error('Who I Am?');
-  }
-
-  var labels = yield github({ uri: `/issues/${payload.issue.id}/labels` });
-  labels = labels.map(label => label.name);
+  // var labels = yield github({ uri: `/issues/${payload.issue.number}/labels` });
+  // labels = labels.map(label => label.name);
 
   const awaiting = 'awaiting feedback from user'
 
 	if (owners.includes(payload.sender.login)) {
-    yield github({
-      uri: `/issues/${payload.issue.id}/labels`,
-      method: 'POST',
-      body: [ awaiting ],
-    })
+    if (!payload.issue.labels.includes(awaiting)) {
+      yield github({
+        uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels`,
+        method: 'POST',
+        body: [ awaiting ],
+      })
+    }
   } else {
-    yield github({
-      uri: `/issues/${payload.issue.id}/labels/${encodeURIComponent(awaiting)}`,
-      method: 'DELETE',
-    })
+    if (payload.issue.labels.includes(awaiting)) {
+      yield github({
+        uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(awaiting)}`,
+        method: 'DELETE',
+      })
+    }
   }
 
 	res.status(200).send({ success: true })
