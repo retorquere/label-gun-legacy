@@ -37,7 +37,7 @@ app.get('/', function(request, response) {
 app.post('/comment', coroute(function* (req, res, next) {
   var payload = req.body;
 
-  if (payload.hook.config.secret != process.env.secret) throw new Error('Who I Am?')
+  if (payload.hook.config.secret != process.env.SECRET) throw new Error('Who I Am?')
 
   var labels = yield github({ uri: `/issues/${payload.issue.id}/labels` });
   labels = labels.map(label => label.name);
