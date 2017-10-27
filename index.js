@@ -7,6 +7,7 @@ const _ = require('lodash');
 
 const app = express();
 const owners = process.env.OWNERS.split(',');
+const ignore = process.env.IGNORE.split(',');
 
 const github = coroutine(function* (req) {
   req = _.merge({
@@ -50,6 +51,8 @@ app.post('/comment', githubMiddleware, coroute(function* (req, res, next) {
   // labels = labels.map(label => label.name);
 
   const awaiting = 'awaiting feedback from user'
+
+  if (ignore.includes(payload.sender.login)) return res.status(200).send({ success: true });
 
   if (owners.includes(payload.sender.login)) {
     if (!payload.issue.labels.includes(awaiting)) {
