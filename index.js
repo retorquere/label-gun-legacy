@@ -9,6 +9,8 @@ const app = express();
 const owners = process.env.OWNERS.split(',');
 const ignore = process.env.IGNORE.split(',');
 
+const activityLog = [];
+
 const github = coroutine(function* (req) {
   req = _.merge({
     json: true,
@@ -18,6 +20,9 @@ const github = coroutine(function* (req) {
     },
   }, req)
   req.uri = `https://api.github.com/repos/${req.uri}`
+
+  activityLog.push({ timestamp: new Date, method: req.method, body: req.body, uri: req.uri });
+  activityLog = activityLog.slice(-20);
 
   return yield request(req)
 })
@@ -38,7 +43,7 @@ app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
 app.get('/', function(request, response) {
-  response.render('pages/index');
+  response.render('pages/index', { activityLog });
 });
 
 app.post('/comment', githubMiddleware, coroute(function* (req, res, next) {
