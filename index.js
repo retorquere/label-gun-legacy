@@ -22,7 +22,7 @@ const github = coroutine(function* (req) {
   req.uri = `https://api.github.com/repos/${req.uri}`
 
   activityLog.push({ timestamp: new Date, method: req.method, body: req.body, uri: req.uri });
-  activityLog = activityLog.slice(-20);
+  activityLog.splice(20, activityLog.length)
 
   return yield request(req)
 })
