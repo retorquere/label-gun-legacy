@@ -56,11 +56,15 @@ app.post('/comment', githubMiddleware, coroute(function* (req, res, next) {
   // labels = labels.map(label => label.name);
 
   const awaiting = 'awaiting feedback from user'
+  const chatter = 'chatter'
+  const week = 'no user feedback for more than a week'
+  const month = 'no user feedback for more than a month'
 
   if (ignore.includes(payload.sender.login)) return res.status(200).send({ success: true });
+  if (payload.issue.labels.includes(chatter)) return res.status(200).send({ success: true });
 
-  if (owners.includes(payload.sender.login)) {
-    if (!payload.issue.labels.includes(awaiting)) {
+  if (owners.includes(payload.sender.login)) { // owner comment
+    if (!payload.issue.labels.includes(awaiting)) { // 'awaiting' label not present
       yield github({
         uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels`,
         method: 'POST',
