@@ -7,7 +7,8 @@ const _ = require('lodash');
 
 const app = express();
 const owners = process.env.OWNERS.split(',');
-const ignore = process.env.IGNORE.split(',');
+const ignoreUsers = new Set(process.env.IGNORE_USERS.split(','));
+const ignoreLabels = new Set(process.env.IGNORE_LABELS.split(','));
 
 const activityLog = [];
 
@@ -60,8 +61,8 @@ app.post('/comment', githubMiddleware, coroute(function* (req, res, next) {
   const week = 'no user feedback for more than a week'
   const month = 'no user feedback for more than a month'
 
-  if (ignore.includes(payload.sender.login)) return res.status(200).send({ success: true });
-  if (payload.issue.labels.includes(chatter)) return res.status(200).send({ success: true });
+  if (ignoreUsers.has(payload.sender.login)) return res.status(200).send({ success: true });
+  if (payload.issue.labels.find(label => ignoreLabels.has(label))) return res.status(200).send({ success: true });
 
   if (owners.includes(payload.sender.login)) { // owner comment
     if (!payload.issue.labels.includes(awaiting)) { // 'awaiting' label not present
