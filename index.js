@@ -47,41 +47,62 @@ app.get('/', function(request, response) {
   response.render('pages/index', { activityLog });
 });
 
-app.post('/comment', githubMiddleware, coroute(function* (req, res, next) {
+app.post('/', githubMiddleware, coroute(function* (req, res, next) {
   if (req.headers['x-github-event'] == 'ping') return res.status(200).send({ success: true });
-  if (req.headers['x-github-event'] != 'issue_comment') throw new Error(`Did not expect ${req.headers['x-github-event']}`);
 
   var payload = req.body;
 
-  // var labels = yield github({ uri: `/issues/${payload.issue.number}/labels` });
-  // labels = labels.map(label => label.name);
-
   const awaiting = 'awaiting feedback from user'
-  const chatter = 'chatter'
-  const week = 'no user feedback for more than a week'
-  const month = 'no user feedback for more than a month'
+  let action = null
 
-  if (ignoreUsers.has(payload.sender.login)) return res.status(200).send({ success: true });
-  if (payload.issue.labels.find(label => ignoreLabels.has(label))) return res.status(200).send({ success: true });
+  switch (req.headers['x-github-event']) {
+    case 'ping':
+      return res.status(200).send({ success: true });
 
-  if (owners.includes(payload.sender.login)) { // owner comment
-    if (!payload.issue.labels.includes(awaiting)) { // 'awaiting' label not present
-      yield github({
-        uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels`,
-        method: 'POST',
-        body: [ awaiting ],
-      })
-    }
-  } else {
-    if (payload.issue.labels.includes(awaiting)) {
-      yield github({
-        uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(awaiting)}`,
-        method: 'DELETE',
-      })
-    }
+    case 'issues':
+      switch (payload.action) {
+        case 'closed':
+          action = 'remove'
+          break;
+        case 'reopened':
+          action = 'add'
+          break;
+      }
+      break;
+
+    case 'issue_comment':
+      if (ignoreUsers.has(payload.sender.login)) return res.status(200).send({ success: true });
+
+      action = owners.includes(payload.sender.login)) ? 'add' : 'remove'
+
+    default:
+      throw new Error(`Did not expect ${req.headers['x-github-event']}`);
   }
 
-  res.status(200).send({ success: true })
+  if (payload.issue.labels.find(label => ignoreLabels.has(label.name))) action = 'remove'
+
+  switch (action) {
+    case 'add':
+      if (!payload.issue.labels.includes(awaiting)) { // 'awaiting' label not present
+        yield github({
+          uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels`,
+          method: 'POST',
+          body: [ awaiting ],
+        })
+      }
+      break;
+
+    case 'remove':
+      if (payload.issue.labels.includes(awaiting)) { // label is present
+        yield github({
+          uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(awaiting)}`,
+          method: 'DELETE',
+        })
+      }
+      break;
+  }
+
+  return res.status(200).send({ success: true })
 }));
 
 app.listen(app.get('port'), function() {
