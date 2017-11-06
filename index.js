@@ -55,11 +55,13 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
   const awaiting = 'awaiting feedback from user'
   let action = null
 
+  /*
   activityLog.push({
     timestamp: new Date,
     ignoreUsers: ignoreUsers.has(payload.sender.login),
     ignoreLabels: payload.issue.labels.find(label => ignoreLabels.has(label.name)),
   })
+  */
 
   switch (req.headers['x-github-event']) {
     case 'ping':
@@ -88,11 +90,11 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
 
   if (payload.issue.labels.find(label => ignoreLabels.has(label.name))) action = 'remove'
 
-  activityLog.push({ timestamp: new Date, action, event: req.headers['x-github-event'] })
+  // activityLog.push({ timestamp: new Date, action, event: req.headers['x-github-event'] })
 
   switch (action) {
     case 'add':
-      if (!payload.issue.labels.includes(awaiting)) { // 'awaiting' label not present
+      if (!payload.issue.labels.find(label => label.name == awaiting)) { // 'awaiting' label not present
         yield github({
           uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels`,
           method: 'POST',
@@ -102,7 +104,8 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
       break;
 
     case 'remove':
-      if (payload.issue.labels.includes(awaiting)) { // label is present
+      activityLog.push({ action: remove, present: payload.issue.labels.find(label => label.name == awaiting) })
+      if (payload.issue.labels.find(label => label.name == awaiting)) { // label is present
         yield github({
           uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(awaiting)}`,
           method: 'DELETE',
