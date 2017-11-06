@@ -6,7 +6,7 @@ const request = require('request-promise');
 const _ = require('lodash');
 
 const app = express();
-const owners = process.env.OWNERS.split(',');
+const owners = new Set(process.env.OWNERS.split(','));
 const ignoreUsers = new Set(process.env.IGNORE_USERS.split(','));
 const ignoreLabels = new Set(process.env.IGNORE_LABELS.split(','));
 
@@ -55,6 +55,12 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
   const awaiting = 'awaiting feedback from user'
   let action = null
 
+  activityLog.push({
+    timestamp: new Date,
+    ignoreUsers: ignoreUsers.has(payload.sender.login),
+    ignoreLabels: payload.issue.labels.find(label => ignoreLabels.has(label.name)),
+  })
+
   switch (req.headers['x-github-event']) {
     case 'ping':
       return res.status(200).send({ success: true });
@@ -73,7 +79,7 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
     case 'issue_comment':
       if (ignoreUsers.has(payload.sender.login)) return res.status(200).send({ success: true });
 
-      action = owners.includes(payload.sender.login) ? 'add' : 'remove'
+      action = owners.has(payload.sender.login) ? 'add' : 'remove'
       break;
 
     default:
@@ -81,6 +87,8 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
   }
 
   if (payload.issue.labels.find(label => ignoreLabels.has(label.name))) action = 'remove'
+
+  activityLog.push({ timestamp: new Date, action, event: req.headers['x-github-event'] })
 
   switch (action) {
     case 'add':
