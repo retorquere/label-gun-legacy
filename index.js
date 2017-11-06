@@ -104,7 +104,6 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
       break;
 
     case 'remove':
-      activityLog.push({ action, present: payload.issue.labels.find(label => label.name == awaiting) })
       if (payload.issue.labels.find(label => label.name == awaiting)) { // label is present
         yield github({
           uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(awaiting)}`,
