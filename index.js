@@ -81,7 +81,7 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
     case 'issue_comment':
       if (ignoreUsers.has(payload.sender.login)) return res.status(200).send({ success: true });
 
-      action = owners.has(payload.sender.login) ? 'add' : 'remove'
+      action = payload.issue.state == 'open' && owners.has(payload.sender.login) ? 'add' : 'remove'
       break;
 
     default:
