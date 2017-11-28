@@ -53,6 +53,7 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
   var payload = req.body;
 
   const awaiting = 'awaiting feedback from user'
+  const inProgress = 'in progress'
   let action = null
 
   /*
@@ -70,6 +71,13 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
     case 'issues':
       switch (payload.action) {
         case 'closed':
+          if (payload.issue.labels.find(label => label.name == inProgress)) { // label is present
+            yield github({
+              uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(inProgress)}`,
+              method: 'DELETE',
+            })
+          }
+
           action = 'remove'
           break;
         case 'reopened':
@@ -81,7 +89,14 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
     case 'issue_comment':
       if (ignoreUsers.has(payload.sender.login)) return res.status(200).send({ success: true });
 
-      action = payload.issue.state == 'open' && owners.has(payload.sender.login) ? 'add' : 'remove'
+      if (payload.issue.state == 'closed') {
+        yield github({
+          uri: `${payload.repository.full_name}/issues/${payload.issue.number}`,
+          method: 'PATCH',
+          body: { state: 'open' },
+        })
+      }
+      action = owners.has(payload.sender.login) ? 'add' : 'remove'
       break;
 
     default:
