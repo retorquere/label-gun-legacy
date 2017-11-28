@@ -47,30 +47,33 @@ app.get('/', function(request, response) {
   response.render('pages/index', { activityLog });
 });
 
-app.post('*', function reroute(req, res, next) {
-  if (req.url == '/' && req.headers['x-github-event']) {
-    req.url += `/${req.headers['x-github-event']}`;
+app.post('/', function reroute(req, res, next) {
+  if (req.headers['x-github-event']) {
+    req.url += `${req.headers['x-github-event']}`;
   }
   next('route');
 });
+
+const AWAITING = 'awaiting feedback from user'
+const IN_PROGRESS = 'in progress'
 
 const update_labels = coroutine(function* (action, payload) {
   if (payload.issue.labels.find(label => ignoreLabels.has(label.name))) action = 'remove'
   switch (action) {
     case 'add':
-      if (!payload.issue.labels.find(label => label.name == awaiting)) { // 'awaiting' label not present
+      if (!payload.issue.labels.find(label => label.name == AWAITING)) { // 'awaiting' label not present
         yield github({
           uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels`,
           method: 'POST',
-          body: [ awaiting ],
+          body: [ AWAITING ],
         })
       }
       break;
 
     case 'remove':
-      if (payload.issue.labels.find(label => label.name == awaiting)) { // label is present
+      if (payload.issue.labels.find(label => label.name == AWAITING)) { // label is present
         yield github({
-          uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(awaiting)}`,
+          uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(AWAITING)}`,
           method: 'DELETE',
         })
       }
@@ -85,12 +88,18 @@ app.post('/ping', githubMiddleware, function (req, res, next) {
 app.post('/issues', githubMiddleware, coroute(function* (req, res, next) {
   switch (req.body.action) {
     case 'closed':
+      if (payload.issue.labels.find(label => label.name == IN_PROGRESS)) { // label is present
+        yield github({
+          uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(IN_PROGRESS)}`,
+          method: 'DELETE',
+        })
+      }
       yield update_labels('remove', req.body);
       break;
+
     case 'reopened':
       yield update_labels('add', req.body);
       break;
-    }
   }
   return res.status(200).send({ success: true })
 }));
@@ -98,7 +107,15 @@ app.post('/issues', githubMiddleware, coroute(function* (req, res, next) {
 app.post('/issue_comment', githubMiddleware, coroute(function* (req, res, next) {
   if (ignoreUsers.has(req.body.sender.login)) return res.status(200).send({ success: true });
 
-  yield update_labels(payload.issue.state == 'open' && owners.has(payload.sender.login) ? 'add' : 'remove', req.body);
+  if (req.body.issue.state == 'closed') {
+    yield github({
+      uri: `${req.body.repository.full_name}/issues/${req.body.issue.number}`,
+      method: 'PATCH',
+      body: { state: 'open' },
+    })
+  }
+
+  yield update_labels(owners.has(req.body.sender.login) ? 'add' : 'remove', req.body);
   return res.status(200).send({ success: true })
 }));
 
