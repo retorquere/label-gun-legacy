@@ -47,66 +47,15 @@ app.get('/', function(request, response) {
   response.render('pages/index', { activityLog });
 });
 
-app.post('/', githubMiddleware, coroute(function* (req, res, next) {
-  if (req.headers['x-github-event'] == 'ping') return res.status(200).send({ success: true });
-
-  var payload = req.body;
-
-  const awaiting = 'awaiting feedback from user'
-  const inProgress = 'in progress'
-  let action = null
-
-  /*
-  activityLog.push({
-    timestamp: new Date,
-    ignoreUsers: ignoreUsers.has(payload.sender.login),
-    ignoreLabels: payload.issue.labels.find(label => ignoreLabels.has(label.name)),
-  })
-  */
-
-  switch (req.headers['x-github-event']) {
-    case 'ping':
-      return res.status(200).send({ success: true });
-
-    case 'issues':
-      switch (payload.action) {
-        case 'closed':
-          if (payload.issue.labels.find(label => label.name == inProgress)) { // label is present
-            yield github({
-              uri: `${payload.repository.full_name}/issues/${payload.issue.number}/labels/${encodeURIComponent(inProgress)}`,
-              method: 'DELETE',
-            })
-          }
-
-          action = 'remove'
-          break;
-        case 'reopened':
-          action = 'add'
-          break;
-      }
-      break;
-
-    case 'issue_comment':
-      if (ignoreUsers.has(payload.sender.login)) return res.status(200).send({ success: true });
-
-      if (payload.issue.state == 'closed') {
-        yield github({
-          uri: `${payload.repository.full_name}/issues/${payload.issue.number}`,
-          method: 'PATCH',
-          body: { state: 'open' },
-        })
-      }
-      action = owners.has(payload.sender.login) ? 'add' : 'remove'
-      break;
-
-    default:
-      throw new Error(`Did not expect ${req.headers['x-github-event']}`);
+app.post('*', function reroute(req, res, next) {
+  if (req.url == '/' && req.headers['x-github-event']) {
+    req.url += `/${req.headers['x-github-event']}`;
   }
+  next('route');
+});
 
+const update_labels = coroutine(function* (action, payload) {
   if (payload.issue.labels.find(label => ignoreLabels.has(label.name))) action = 'remove'
-
-  // activityLog.push({ timestamp: new Date, action, event: req.headers['x-github-event'] })
-
   switch (action) {
     case 'add':
       if (!payload.issue.labels.find(label => label.name == awaiting)) { // 'awaiting' label not present
@@ -127,9 +76,43 @@ app.post('/', githubMiddleware, coroute(function* (req, res, next) {
       }
       break;
   }
+})
 
+app.post('/ping', githubMiddleware, function (req, res, next) {
+  return res.status(200).send({ success: true });
+});
+
+app.post('/issues', githubMiddleware, coroute(function* (req, res, next) {
+  switch (req.body.action) {
+    case 'closed':
+      yield update_labels('remove', req.body);
+      break;
+    case 'reopened':
+      yield update_labels('add', req.body);
+      break;
+    }
+  }
   return res.status(200).send({ success: true })
 }));
+
+app.post('/issue_comment', githubMiddleware, coroute(function* (req, res, next) {
+  if (ignoreUsers.has(req.body.sender.login)) return res.status(200).send({ success: true });
+
+  yield update_labels(payload.issue.state == 'open' && owners.has(payload.sender.login) ? 'add' : 'remove', req.body);
+  return res.status(200).send({ success: true })
+}));
+
+app.post('/gollum', githubMiddleware, coroute(function* (req, res, next) {
+  // get current gh-pages with ref=gh-pages https://developer.github.com/v3/repos/contents/#get-contents
+
+  for (const page of req.body.pages) {
+    // https://developer.github.com/v3/activity/events/types/#gollumevent
+
+
+  }
+  return res.status(200).send({ success: true })
+}));
+
 
 app.listen(app.get('port'), function() {
   console.log('Node app is running on port', app.get('port'));
