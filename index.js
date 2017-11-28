@@ -107,7 +107,7 @@ app.post('/issues', githubMiddleware, coroute(function* (req, res, next) {
 app.post('/issue_comment', githubMiddleware, coroute(function* (req, res, next) {
   if (ignoreUsers.has(req.body.sender.login)) return res.status(200).send({ success: true });
 
-  if (req.body.issue.state == 'closed') {
+  if (req.body.issue.state == 'closed' && !owners.has(req.body.sender.login)) {
     yield github({
       uri: `${req.body.repository.full_name}/issues/${req.body.issue.number}`,
       method: 'PATCH',
