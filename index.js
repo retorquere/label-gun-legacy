@@ -4,6 +4,7 @@ const coroute = require('co-express');
 const coroutine = require('bluebird').coroutine;
 const request = require('request-promise');
 const _ = require('lodash');
+const jwt = require('express-jwt');
 
 const app = express();
 const owners = new Set(process.env.OWNERS.split(','));
@@ -46,6 +47,17 @@ app.set('view engine', 'ejs');
 app.get('/', function(request, response) {
   response.render('pages/index', { activityLog });
 });
+
+app.get('/scan-issues', jwt({secret: process.env.SECRET}), couroute(function* (req, res, next) {
+  const issues = yield github({ uri: `${payload.repository.full_name}/issues` })
+  for (const issue of issues) {
+    if (payload.issue.labels.find(label => label.name == AWAITING)) { // 'awaiting' label not present
+      // check date last comment, awake thread if necessary
+    }
+  }
+
+  return res.status(200).send({ success: true });
+})
 
 app.post('/', function reroute(req, res, next) {
   if (req.headers['x-github-event']) {
