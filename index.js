@@ -48,6 +48,7 @@ app.get('/', function(request, response) {
   response.render('pages/index', { activityLog });
 });
 
+/*
 app.get('/scan-issues', jwt({secret: process.env.SECRET}), couroute(function* (req, res, next) {
   const issues = yield github({ uri: `${payload.repository.full_name}/issues` })
   for (const issue of issues) {
@@ -58,6 +59,7 @@ app.get('/scan-issues', jwt({secret: process.env.SECRET}), couroute(function* (r
 
   return res.status(200).send({ success: true });
 })
+*/
 
 app.post('/', function reroute(req, res, next) {
   if (req.headers['x-github-event']) {
