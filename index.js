@@ -24,7 +24,7 @@ async function load(context) {
   }
 
   request.unlabel = name => {
-    request.edits.labels = edits.labels.filter(label => label !== name)
+    request.edits.labels = request.edits.labels.filter(label => label !== name)
   }
 
   request.save = async reason => {
