@@ -1,8 +1,13 @@
 const _ = require('lodash')
 
 async function load(context) {
-  const request = {
-    config: await context.config('config.yml')
+  const request = { }
+
+  try {
+    request.config = await context.config('config.yml')
+  } catch (err) {
+    context.log(err)
+    request.config = null
   }
   request.config = ((request.config || {})['issue-workflow']) || {}
 
