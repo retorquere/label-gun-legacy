@@ -1,38 +1,30 @@
 {
-  "name": "node-js-getting-started",
-  "version": "0.2.6",
-  "description": "A sample Node.js app using Express 4",
-  "engines": {
-    "node": "8.7.0"
-  },
-  "main": "index.js",
+  "name": "label-gun",
+  "version": "1.0.0",
+  "description": "",
+  "author": "Emiliano Heyns <emiliano.heyns@iris-advies.com> (https://github.com/retorquere/label-gun)",
+  "license": "ISC",
+  "repository": "https://github.com/retorquere/label-gun.git",
   "scripts": {
-    "start": "node index.js",
-    "test": "node test.js"
+    "start": "probot run ./index.js",
+    "test": "probot simulate issues test/fixtures/owner-comment.json ./index.js"
   },
   "dependencies": {
-    "bluebird": "^3.5.1",
-    "body-parser": "^1.18.2",
-    "co-express": "^2.0.0",
-    "ejs": "2.5.7",
-    "express": "4.16.2",
-    "express-jwt": "^5.3.0",
-    "github-webhook-middleware": "^0.0.2",
-    "lodash": "^4.17.4",
-    "request": "^2.83.0",
-    "request-promise": "^4.2.2"
+    "lodash": "^4.17.5",
+    "probot": "^5.0.0"
   },
   "devDependencies": {
-    "tape": "^4.8.0"
+    "jest": "^21.2.1",
+    "smee-client": "^1.0.1",
+    "standard": "^10.0.3"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/heroku/node-js-getting-started"
+  "engines": {
+    "node": ">= 7.7.0",
+    "npm": ">= 4.0.0"
   },
-  "keywords": [
-    "node",
-    "heroku",
-    "express"
-  ],
-  "license": "MIT"
+  "standard": {
+    "env": [
+      "jest"
+    ]
+  }
 }
