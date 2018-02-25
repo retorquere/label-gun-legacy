@@ -1,12 +1,12 @@
 const _ = require('lodash')
 
-async function load(context) {
+async function load(robot, context) {
   const request = { }
 
   try {
     request.config = await context.config('config.yml')
   } catch (err) {
-    context.log(err)
+    robot.log(err)
     request.config = null
   }
   request.config = ((request.config || {})['label-gun']) || {}
@@ -35,7 +35,7 @@ async function load(context) {
   request.save = async reason => {
     if (request.edits.state === request.issue.state && _.isEqual(new Set(request.edits.labels), new Set(request.issue.labels))) return
 
-    context.log(`${reason}(${context.payload.sender.login}${request.isContributor ? '*' : ''}): ${request.issue.state}[${request.issue.labels}] -> ${request.edits.state}[${request.edits.labels}]`)
+    robot.log(`${reason}(${context.payload.sender.login}${request.isContributor ? '*' : ''}): ${request.issue.state}[${request.issue.labels}] -> ${request.edits.state}[${request.edits.labels}]`)
     await context.github.issues.edit(request.edits)
   }
 
@@ -53,7 +53,7 @@ module.exports = async robot => {
   // https://probot.github.io/docs/development/
 
   robot.on('issue_comment.created', async context => {
-    const req = await load(context)
+    const req = await load(robot, context)
 
     // if a non-contrib comments on a closed issue, re-open it
     if (req.issue.state === 'closed' && !req.isContributer) req.edits.state = 'open'
@@ -70,7 +70,7 @@ module.exports = async robot => {
   })
 
   robot.on('issues.closed', async context => {
-    const req = await load(context)
+    const req = await load(robot, context)
 
     if (req.isContributor) {
       req.unlabel(req.config.labels.feedback)
@@ -83,7 +83,7 @@ module.exports = async robot => {
   })
 
   robot.on('issues.reopened', async context => {
-    const req = await load(context)
+    const req = await load(robot, context)
 
     if (req.isContributor && !req.ignore) req.label(req.config.labels.feedback)
 
