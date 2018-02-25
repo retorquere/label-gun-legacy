@@ -56,7 +56,7 @@ module.exports = async robot => {
     const req = await load(robot, context)
 
     // if a non-contrib comments on a closed issue, re-open it
-    if (req.issue.state === 'closed' && !req.isContributer) req.edits.state = 'open'
+    if (req.edits.state === 'closed' && !req.isContributer) req.edits.state = 'open'
 
     if (!req.ignore && req.edits.state === 'open') {
       if (req.isContributor) {
@@ -79,7 +79,7 @@ module.exports = async robot => {
       req.edits.state = 'open'
     }
 
-    await req.save('issue_comment.created')
+    await req.save('issues.closed')
   })
 
   robot.on('issues.reopened', async context => {
@@ -87,6 +87,6 @@ module.exports = async robot => {
 
     if (req.isContributor && !req.ignore) req.label(req.config.labels.feedback)
 
-    await req.save('issue_comment.created')
+    await req.save('issues.reopend')
   })
 }
