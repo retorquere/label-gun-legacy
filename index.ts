@@ -1,7 +1,32 @@
 const _ = require('lodash')
 
-async function load(robot, context) {
-  const request = { }
+async function load(robot: any, context: any) {
+  const request: {
+    config: any
+    isContributor: boolean
+
+    ignore: boolean
+    reopen: boolean
+
+    issue: { state: string, labels: Array<string> }
+    edits: { state: string, labels: Array<string> }
+
+    label: (name: string) => void
+    unlabel: (name: string) => void
+    save: (method: string) => void
+  } = {
+    config: null,
+    isContributor: false,
+    ignore: false,
+    reopen: false,
+
+    issue: null,
+    edits: null,
+
+    label: null,
+    unlabel: null,
+    save: null,
+  }
 
   try {
     request.config = await context.config('config.yml')
@@ -17,13 +42,13 @@ async function load(robot, context) {
   request.config.labels.reopen = new Set(request.config.labels.reopen || [])
 
   const contributors = (await context.github.repos.getContributors(context.repo())).data
-  request.isContributor = contributors.find(contr => contr.login === context.payload.sender.login)
+  request.isContributor = contributors.find((contr: any) => contr.login === context.payload.sender.login)
   robot.log(`contributors: ${context.payload.sender.login} / ${contributors} => ${request.isContributor}`)
-  request.issue = { ...context.payload.issue, labels: context.payload.issue.labels.map(label => label.name) }
+  request.issue = { ...context.payload.issue, labels: context.payload.issue.labels.map((label: any) => label.name) }
   request.edits = context.issue({ state: request.issue.state, labels: [...request.issue.labels] })
 
-  request.ignore = request.issue.labels.find(label => request.config.labels.ignore.has(label))
-  request.reopen = request.issue.labels.find(label => request.config.labels.reopen.has(label) || request.config.labels.reopen.has('*'))
+  request.ignore = !!request.issue.labels.find(label => request.config.labels.ignore.has(label))
+  request.reopen = !!request.issue.labels.find(label => request.config.labels.reopen.has(label) || request.config.labels.reopen.has('*'))
 
   request.label = name => {
     if (request.edits.labels.includes(name)) return
@@ -44,7 +69,7 @@ async function load(robot, context) {
   return request
 }
 
-module.exports = async robot => {
+module.exports = async (robot: any) => {
   // Your code here
   robot.log('Yay, the app was loaded!')
 
@@ -54,7 +79,7 @@ module.exports = async robot => {
   // To get your app running against GitHub, see:
   // https://probot.github.io/docs/development/
 
-  robot.on('issue_comment.created', async context => {
+  robot.on('issue_comment.created', async (context: any) => {
     const req = await load(robot, context)
 
     // if a non-contrib comments on a closed issue, re-open it
@@ -71,7 +96,7 @@ module.exports = async robot => {
     await req.save('issue_comment.created')
   })
 
-  robot.on('issues.closed', async context => {
+  robot.on('issues.closed', async (context: any) => {
     const req = await load(robot, context)
 
     if (req.isContributor) {
@@ -84,7 +109,7 @@ module.exports = async robot => {
     await req.save('issues.closed')
   })
 
-  robot.on('issues.reopened', async context => {
+  robot.on('issues.reopened', async (context: any) => {
     const req = await load(robot, context)
 
     if (req.isContributor && !req.ignore) req.label(req.config.labels.feedback)
