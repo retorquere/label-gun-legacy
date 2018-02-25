@@ -80,7 +80,7 @@ module.exports = async robot => {
   robot.on('issues.reopened', async context => {
     const req = await load(context)
 
-    if (req.isContributor && !req.ignore) req.label(config.labels.feedback)
+    if (req.isContributor && !req.ignore) req.label(req.config.labels.feedback)
 
     await req.save('issue_comment.created')
   })
