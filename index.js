@@ -16,7 +16,9 @@ async function load(robot, context) {
   request.config.labels.ignore = new Set(request.config.labels.ignore || [])
   request.config.labels.reopen = new Set(request.config.labels.reopen || [])
 
-  request.isContributor = (await context.github.repos.getContributors(context.repo())).data.find(contr => contr.login === context.payload.sender.login)
+  const contributors = (await context.github.repos.getContributors(context.repo())).data
+  request.isContributor = contributors.find(contr => contr.login === context.payload.sender.login)
+  robot.log(`contributors: ${context.payload.sender.login} / ${contributors} => ${request.isContributor}`)
   request.issue = { ...context.payload.issue, labels: context.payload.issue.labels.map(label => label.name) }
   request.edits = context.issue({ state: request.issue.state, labels: [...request.issue.labels] })
 
@@ -56,7 +58,7 @@ module.exports = async robot => {
     const req = await load(robot, context)
 
     // if a non-contrib comments on a closed issue, re-open it
-    if (req.edits.state === 'closed' && !req.isContributer) req.edits.state = 'open'
+    if (req.edits.state === 'closed' && !req.isContributor) req.edits.state = 'open'
 
     if (!req.ignore && req.edits.state === 'open') {
       if (req.isContributor) {
