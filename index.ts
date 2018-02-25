@@ -41,14 +41,15 @@ async function load(robot: any, context: any) {
   request.config.labels.ignore = new Set(request.config.labels.ignore || [])
   request.config.labels.reopen = new Set(request.config.labels.reopen || [])
 
-  const contributors = (await context.github.repos.getContributors(context.repo())).data
-  request.isContributor = contributors.find((contr: any) => contr.login === context.payload.sender.login)
-  robot.log(`contributors: ${context.payload.sender.login} / ${contributors} => ${request.isContributor}`)
+  const contributors = new Set((await context.github.repos.getContributors(context.repo())).data.map((contributor: any) => contributor.login))
+  request.isContributor = contributors.has(context.payload.sender.login)
   request.issue = { ...context.payload.issue, labels: context.payload.issue.labels.map((label: any) => label.name) }
   request.edits = context.issue({ state: request.issue.state, labels: [...request.issue.labels] })
 
-  request.ignore = !!request.issue.labels.find(label => request.config.labels.ignore.has(label))
-  request.reopen = !!request.issue.labels.find(label => request.config.labels.reopen.has(label) || request.config.labels.reopen.has('*'))
+  robot.log(`contributors: ${context.payload.sender.login} / ${Array.from(contributors)} => ${request.isContributor}`)
+
+  request.ignore = (request.issue.labels.find(label => request.config.labels.ignore.has(label)).length !== 0)
+  request.reopen = request.config.labels.reopen.has('*') || (request.issue.labels.find(label => request.config.labels.reopen.has(label)).length !== 0)
 
   request.label = name => {
     if (request.edits.labels.includes(name)) return
