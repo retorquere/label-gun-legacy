@@ -9,7 +9,7 @@ async function load(context) {
     context.log(err)
     request.config = null
   }
-  request.config = ((request.config || {})['issue-workflow']) || {}
+  request.config = ((request.config || {})['label-gun']) || {}
 
   if (!request.config.labels) request.config.labels = {}
   if (!request.config.labels.feedback) request.config.labels.feedback = 'awaiting-user-feedback'
