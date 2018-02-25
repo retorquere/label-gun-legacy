@@ -38,8 +38,8 @@ async function load(robot: any, context: any) {
 
   if (!request.config.labels) request.config.labels = {}
   if (!request.config.labels.feedback) request.config.labels.feedback = 'awaiting-user-feedback'
-  request.config.labels.ignore = new Set(request.config.labels.ignore || [])
-  request.config.labels.reopen = new Set(request.config.labels.reopen || [])
+  request.config.labels.ignore = request.config.labels.ignore || []
+  request.config.labels.reopen = request.config.labels.reopen || []
 
   const contributors = new Set((await context.github.repos.getContributors(context.repo())).data.map((contributor: any) => contributor.login))
   request.isContributor = contributors.has(context.payload.sender.login)
@@ -48,8 +48,8 @@ async function load(robot: any, context: any) {
 
   robot.log(`contributors: ${context.payload.sender.login} / ${Array.from(contributors)} => ${request.isContributor}`)
 
-  request.ignore = (request.issue.labels.find(label => request.config.labels.ignore.has(label)).length !== 0)
-  request.reopen = request.config.labels.reopen.has('*') || (request.issue.labels.find(label => request.config.labels.reopen.has(label)).length !== 0)
+  request.ignore = (_.intersection(request.issue.labels, request.config.labels.ignore).length !== 0)
+  request.reopen = (_.intersection(request.issue.labels.concat('*'), request.config.labels.reopen).length !== 0)
 
   request.label = name => {
     if (request.edits.labels.includes(name)) return
