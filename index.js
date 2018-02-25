@@ -21,7 +21,7 @@ async function load(context) {
   request.edits = context.issue({ state: request.issue.state, labels: [...request.issue.labels] })
 
   request.ignore = request.issue.labels.find(label => request.config.labels.ignore.has(label))
-  request.reopen = request.issue.labels.find(label => request.config.labels.reopen.has(label))
+  request.reopen = request.issue.labels.find(label => request.config.labels.reopen.has(label) || request.config.labels.reopen.has('*'))
 
   request.label = name => {
     if (request.edits.labels.includes(name)) return
