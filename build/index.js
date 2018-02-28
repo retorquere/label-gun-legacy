@@ -70,7 +70,7 @@ module.exports = (robot) => __awaiter(this, void 0, void 0, function* () {
     robot.on('issue_comment.created', (context) => __awaiter(this, void 0, void 0, function* () {
         const req = yield (new ProbotRequest(robot, context)).load();
         // if a non-contrib comments on a closed issue, re-open it
-        if (req.state === 'closed' && !req.isContributor)
+        if (req.state === 'closed' && !req.isContributor && req.reopen)
             req.state = 'open';
         if (!req.ignore && req.state === 'open') {
             if (req.isContributor) {
@@ -88,7 +88,7 @@ module.exports = (robot) => __awaiter(this, void 0, void 0, function* () {
             req.unlabel(req.config.feedback);
         }
         else if (req.reopen) {
-            // if a non-contrib close an issue, re-open it
+            // if a non-contrib closes an issue, re-open it
             req.state = 'open';
         }
         yield req.save('issues.closed');

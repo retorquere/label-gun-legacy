@@ -85,7 +85,7 @@ module.exports = async (robot: any) => {
     const req = await (new ProbotRequest(robot, context)).load()
 
     // if a non-contrib comments on a closed issue, re-open it
-    if (req.state === 'closed' && !req.isContributor) req.state = 'open'
+    if (req.state === 'closed' && !req.isContributor && req.reopen) req.state = 'open'
 
     if (!req.ignore && req.state === 'open') {
       if (req.isContributor) {
@@ -104,7 +104,7 @@ module.exports = async (robot: any) => {
     if (req.isContributor) {
       req.unlabel(req.config.feedback)
     } else if (req.reopen) {
-      // if a non-contrib close an issue, re-open it
+      // if a non-contrib closes an issue, re-open it
       req.state = 'open'
     }
 
