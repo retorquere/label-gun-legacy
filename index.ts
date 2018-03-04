@@ -1,5 +1,13 @@
 const _ = require('lodash')
 
+let slack: any
+try {
+  slack = require('slack-notify')(`https://hooks.slack.com/services/${process.env.SLACK_TOKEN}`)
+} catch (err) {
+  console.log(err)
+  slack = null
+}
+
 class ProbotRequest {
   private robot: any
   private context: any
@@ -64,7 +72,16 @@ class ProbotRequest {
   }
 
   public async save(reason: string) {
-    if (this.state === this.issue.state && _.isEqual(new Set(this.labels), new Set(this.issue.labels))) return
+    const changed = (this.state !== this.issue.state || !_.isEqual(new Set(this.labels), new Set(this.issue.labels)))
+    const msg = `${reason}(${this.context.payload.sender.login}${this.isContributor ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`
+
+    try {
+      if (slack) slack.alert(`${msg} (changed: ${changed})`)
+    } catch (err) {
+      this.robot.log('' + err)
+    }
+
+    if (!changed) return
 
     this.robot.log(`${reason}(${this.context.payload.sender.login}${this.isContributor ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`)
     await this.context.github.issues.edit(this.context.issue({ state: this.state, labels: this.labels }))

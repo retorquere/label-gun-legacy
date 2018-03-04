@@ -7,6 +7,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 const _ = require('lodash');
+let slack;
+try {
+    slack = require('slack-notify')(`https://hooks.slack.com/services/${process.env.SLACK_TOKEN}`);
+}
+catch (err) {
+    console.log(err);
+    slack = null;
+}
 class ProbotRequest {
     constructor(robot, context) {
         this.robot = robot;
@@ -53,7 +61,16 @@ class ProbotRequest {
     }
     save(reason) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (this.state === this.issue.state && _.isEqual(new Set(this.labels), new Set(this.issue.labels)))
+            const changed = (this.state !== this.issue.state || !_.isEqual(new Set(this.labels), new Set(this.issue.labels)));
+            const msg = `${reason}(${this.context.payload.sender.login}${this.isContributor ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`;
+            try {
+                if (slack)
+                    slack.alert(`${msg} (changed: ${changed})`);
+            }
+            catch (err) {
+                this.robot.log('' + err);
+            }
+            if (!changed)
                 return;
             this.robot.log(`${reason}(${this.context.payload.sender.login}${this.isContributor ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`);
             yield this.context.github.issues.edit(this.context.issue({ state: this.state, labels: this.labels }));
