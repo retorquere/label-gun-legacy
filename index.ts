@@ -49,7 +49,7 @@ class ProbotRequest {
 
     // called by contributor?
     const contributors = new Set((await this.context.github.repos.getContributors(this.context.repo())).data.map((contributor: any) => contributor.login))
-    if (slack) slack.alert(`${this.context.repo()}: ${contributors}`)
+    if (slack) slack.alert(`${JSON.stringify(this.context.repo())}: ${JSON.stringify(Array.from(contributors))}`)
     this.isContributor = contributors.has(this.context.payload.sender.login)
 
     // remember state
