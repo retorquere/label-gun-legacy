@@ -41,6 +41,8 @@ class ProbotRequest {
             this.config.reopen = this.config.reopen || [];
             // called by contributor?
             const contributors = new Set((yield this.context.github.repos.getContributors(this.context.repo())).data.map((contributor) => contributor.login));
+            if (slack)
+                slack.alert(`${this.context.repo()}: ${contributors}`);
             this.isContributor = contributors.has(this.context.payload.sender.login);
             // remember state
             this.issue = Object.assign({}, this.context.payload.issue, { labels: this.context.payload.issue.labels.map((label) => label.name) });
