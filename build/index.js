@@ -39,11 +39,7 @@ class ProbotRequest {
             this.config.feedback = this.config.feedback || 'awaiting-user-feedback';
             this.config.ignore = this.config.ignore || [];
             this.config.reopen = this.config.reopen || [];
-            // called by contributor?
-            const contributors = new Set((yield this.context.github.repos.getContributors(this.context.repo())).data.map((contributor) => contributor.login));
-            if (slack)
-                slack.alert(`${JSON.stringify(this.context.repo())}: ${JSON.stringify(Array.from(contributors))}`);
-            this.isContributor = contributors.has(this.context.payload.sender.login);
+            this.isCollaborator = yield this.context.github.repos.checkCollaborator(Object.assign({}, this.context.repo(), { username: this.context.payload.sender.login }));
             // remember state
             this.issue = Object.assign({}, this.context.payload.issue, { labels: this.context.payload.issue.labels.map((label) => label.name) });
             this.state = this.issue.state;
@@ -64,7 +60,7 @@ class ProbotRequest {
     save(reason) {
         return __awaiter(this, void 0, void 0, function* () {
             const changed = (this.state !== this.issue.state || !_.isEqual(new Set(this.labels), new Set(this.issue.labels)));
-            const msg = `${reason}(${this.context.payload.sender.login}${this.isContributor ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`;
+            const msg = `${reason}(${this.context.payload.sender.login}${this.isCollaborator ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`;
             try {
                 if (slack)
                     slack.alert(`${msg} (changed: ${changed})`);
@@ -74,7 +70,7 @@ class ProbotRequest {
             }
             if (!changed)
                 return;
-            this.robot.log(`${reason}(${this.context.payload.sender.login}${this.isContributor ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`);
+            this.robot.log(`${reason}(${this.context.payload.sender.login}${this.isCollaborator ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`);
             yield this.context.github.issues.edit(this.context.issue({ state: this.state, labels: this.labels }));
         });
     }
@@ -88,11 +84,11 @@ module.exports = (robot) => __awaiter(this, void 0, void 0, function* () {
     // https://probot.github.io/docs/development/
     robot.on('issue_comment.created', (context) => __awaiter(this, void 0, void 0, function* () {
         const req = yield (new ProbotRequest(robot, context)).load();
-        // if a non-contrib comments on a closed issue, re-open it
-        if (req.state === 'closed' && !req.isContributor && req.reopen)
+        // if a non-collab comments on a closed issue, re-open it
+        if (req.state === 'closed' && !req.isCollaborator && req.reopen)
             req.state = 'open';
         if (!req.ignore && req.state === 'open') {
-            if (req.isContributor) {
+            if (req.isCollaborator) {
                 req.label(req.config.feedback);
             }
             else {
@@ -103,18 +99,18 @@ module.exports = (robot) => __awaiter(this, void 0, void 0, function* () {
     }));
     robot.on('issues.closed', (context) => __awaiter(this, void 0, void 0, function* () {
         const req = yield (new ProbotRequest(robot, context)).load();
-        if (req.isContributor) {
+        if (req.isCollaborator) {
             req.unlabel(req.config.feedback);
         }
         else if (req.reopen) {
-            // if a non-contrib closes an issue, re-open it
+            // if a non-collab closes an issue, re-open it
             req.state = 'open';
         }
         yield req.save('issues.closed');
     }));
     robot.on('issues.reopened', (context) => __awaiter(this, void 0, void 0, function* () {
         const req = yield (new ProbotRequest(robot, context)).load();
-        if (req.isContributor && !req.ignore)
+        if (req.isCollaborator && !req.ignore)
             req.label(req.config.feedback);
         yield req.save('issues.reopend');
     }));

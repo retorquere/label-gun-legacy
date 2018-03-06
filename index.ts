@@ -13,7 +13,7 @@ class ProbotRequest {
   private context: any
   private issue: any
 
-  public isContributor: boolean
+  public isCollaborator: boolean
   public reopen: boolean
   public ignore: boolean
 
@@ -47,10 +47,7 @@ class ProbotRequest {
     this.config.ignore = this.config.ignore || []
     this.config.reopen = this.config.reopen || []
 
-    // called by contributor?
-    const contributors = new Set((await this.context.github.repos.getContributors(this.context.repo())).data.map((contributor: any) => contributor.login))
-    if (slack) slack.alert(`${JSON.stringify(this.context.repo())}: ${JSON.stringify(Array.from(contributors))}`)
-    this.isContributor = contributors.has(this.context.payload.sender.login)
+    this.isCollaborator = await this.context.github.repos.checkCollaborator({...this.context.repo(), username: this.context.payload.sender.login})
 
     // remember state
     this.issue = { ...this.context.payload.issue, labels: this.context.payload.issue.labels.map((label: any) => label.name) }
@@ -74,7 +71,7 @@ class ProbotRequest {
 
   public async save(reason: string) {
     const changed = (this.state !== this.issue.state || !_.isEqual(new Set(this.labels), new Set(this.issue.labels)))
-    const msg = `${reason}(${this.context.payload.sender.login}${this.isContributor ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`
+    const msg = `${reason}(${this.context.payload.sender.login}${this.isCollaborator ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`
 
     try {
       if (slack) slack.alert(`${msg} (changed: ${changed})`)
@@ -84,7 +81,7 @@ class ProbotRequest {
 
     if (!changed) return
 
-    this.robot.log(`${reason}(${this.context.payload.sender.login}${this.isContributor ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`)
+    this.robot.log(`${reason}(${this.context.payload.sender.login}${this.isCollaborator ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`)
     await this.context.github.issues.edit(this.context.issue({ state: this.state, labels: this.labels }))
   }
 }
@@ -102,11 +99,11 @@ module.exports = async (robot: any) => {
   robot.on('issue_comment.created', async (context: any) => {
     const req = await (new ProbotRequest(robot, context)).load()
 
-    // if a non-contrib comments on a closed issue, re-open it
-    if (req.state === 'closed' && !req.isContributor && req.reopen) req.state = 'open'
+    // if a non-collab comments on a closed issue, re-open it
+    if (req.state === 'closed' && !req.isCollaborator && req.reopen) req.state = 'open'
 
     if (!req.ignore && req.state === 'open') {
-      if (req.isContributor) {
+      if (req.isCollaborator) {
         req.label(req.config.feedback)
       } else {
         req.unlabel(req.config.feedback)
@@ -119,10 +116,10 @@ module.exports = async (robot: any) => {
   robot.on('issues.closed', async (context: any) => {
     const req = await (new ProbotRequest(robot, context)).load()
 
-    if (req.isContributor) {
+    if (req.isCollaborator) {
       req.unlabel(req.config.feedback)
     } else if (req.reopen) {
-      // if a non-contrib closes an issue, re-open it
+      // if a non-collab closes an issue, re-open it
       req.state = 'open'
     }
 
@@ -132,7 +129,7 @@ module.exports = async (robot: any) => {
   robot.on('issues.reopened', async (context: any) => {
     const req = await (new ProbotRequest(robot, context)).load()
 
-    if (req.isContributor && !req.ignore) req.label(req.config.feedback)
+    if (req.isCollaborator && !req.ignore) req.label(req.config.feedback)
 
     await req.save('issues.reopend')
   })
