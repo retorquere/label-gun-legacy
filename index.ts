@@ -47,7 +47,11 @@ class ProbotRequest {
     this.config.ignore = this.config.ignore || []
     this.config.reopen = this.config.reopen || []
 
-    this.isCollaborator = await this.context.github.repos.checkCollaborator({...this.context.repo(), username: this.context.payload.sender.login})
+    try {
+      this.isCollaborator = await this.context.github.repos.checkCollaborator({...this.context.repo(), username: this.context.payload.sender.login})
+    } catch (err) {
+      if (slack) slack.alert(`${this.context.payload.sender.login} = collab? (${err})`)
+    }
 
     // remember state
     this.issue = { ...this.context.payload.issue, labels: this.context.payload.issue.labels.map((label: any) => label.name) }
