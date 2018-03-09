@@ -14,6 +14,7 @@ class ProbotRequest {
   private issue: any
 
   public isCollaborator: boolean
+  public isBot: boolean
   public reopen: boolean
   public ignore: boolean
 
@@ -57,8 +58,9 @@ class ProbotRequest {
     this.state = this.issue.state
     this.labels = [...this.issue.labels]
 
-    this.ignore = (_.intersection(this.issue.labels, this.config.ignore).length !== 0)
-    this.reopen = (_.intersection(this.issue.labels.concat('*'), this.config.reopen).length !== 0)
+    this.isBot = this.context.payload.sender.login.endsWith(' [bot]')
+    this.ignore = (_.intersection(this.issue.labels, this.config.ignore).length !== 0) || this.isBot
+    this.reopen = (_.intersection(this.issue.labels.concat('*'), this.config.reopen).length !== 0) && !this.isBot
 
     return this
   }
