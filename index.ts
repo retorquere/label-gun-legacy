@@ -35,8 +35,7 @@ class ProbotRequest {
     // load config
     let config
     try {
-      config = await this.context.config('config.yml')
-      if (config) config = config['label-gun']
+      config = await this.context.config('label-gun.yml')
       if (config && config.reopen === '*') config.reopen = ['*']
     } catch (err) {
       this.robot.log(err)

@@ -25,9 +25,7 @@ class ProbotRequest {
             // load config
             let config;
             try {
-                config = yield this.context.config('config.yml');
-                if (config)
-                    config = config['label-gun'];
+                config = yield this.context.config('label-gun.yml');
                 if (config && config.reopen === '*')
                     config.reopen = ['*'];
             }
