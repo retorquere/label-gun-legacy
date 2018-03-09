@@ -48,7 +48,7 @@ class ProbotRequest {
             this.issue = Object.assign({}, this.context.payload.issue, { labels: this.context.payload.issue.labels.map((label) => label.name) });
             this.state = this.issue.state;
             this.labels = [...this.issue.labels];
-            this.isBot = this.context.payload.sender.login.endsWith(' [bot]');
+            this.isBot = this.context.payload.sender.login.endsWith('[bot]');
             this.ignore = (_.intersection(this.issue.labels, this.config.ignore).length !== 0) || this.isBot;
             this.reopen = (_.intersection(this.issue.labels.concat('*'), this.config.reopen).length !== 0) && !this.isBot;
             return this;
