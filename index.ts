@@ -1,13 +1,5 @@
 const _ = require('lodash')
 
-let slack: any
-try {
-  slack = require('slack-notify')(`https://hooks.slack.com/services/${process.env.SLACK_TOKEN}`)
-} catch (err) {
-  console.log(err)
-  slack = null
-}
-
 class ProbotRequest {
   private robot: any
   private context: any
@@ -50,7 +42,7 @@ class ProbotRequest {
     try {
       this.isCollaborator = await this.context.github.repos.checkCollaborator({...this.context.repo(), username: this.context.payload.sender.login})
     } catch (err) {
-      if (slack) slack.alert(`${this.context.payload.sender.login} = collab? (${err})`)
+      this.robot.log(`${this.context.payload.sender.login} = collab? (${err})`)
     }
 
     // remember state
@@ -60,7 +52,9 @@ class ProbotRequest {
 
     this.isBot = this.context.payload.sender.login.endsWith('[bot]')
     this.ignore = (_.intersection(this.issue.labels, this.config.ignore).length !== 0) || this.isBot
-    this.reopen = (_.intersection(this.issue.labels.concat('*'), this.config.reopen).length !== 0) && !this.isBot
+    this.reopen = (_.intersection(this.issue.labels.concat('*'), this.config.reopen).length !== 0)
+      && (_.intersection(this.issue.labels.map((label: string) => `-${label}`), this.config.reopen).length === 0)
+      && !this.isBot
 
     return this
   }
@@ -77,12 +71,6 @@ class ProbotRequest {
   public async save(reason: string) {
     const changed = (this.state !== this.issue.state || !_.isEqual(new Set(this.labels), new Set(this.issue.labels)))
     const msg = `${reason}(${this.context.payload.sender.login}${this.isCollaborator ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`
-
-    try {
-      if (slack) slack.alert(`${msg} (changed: ${changed})`)
-    } catch (err) {
-      this.robot.log('' + err)
-    }
 
     if (!changed) return
 

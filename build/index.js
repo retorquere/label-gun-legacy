@@ -7,14 +7,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 const _ = require('lodash');
-let slack;
-try {
-    slack = require('slack-notify')(`https://hooks.slack.com/services/${process.env.SLACK_TOKEN}`);
-}
-catch (err) {
-    console.log(err);
-    slack = null;
-}
 class ProbotRequest {
     constructor(robot, context) {
         this.robot = robot;
@@ -41,8 +33,7 @@ class ProbotRequest {
                 this.isCollaborator = yield this.context.github.repos.checkCollaborator(Object.assign({}, this.context.repo(), { username: this.context.payload.sender.login }));
             }
             catch (err) {
-                if (slack)
-                    slack.alert(`${this.context.payload.sender.login} = collab? (${err})`);
+                this.robot.log(`${this.context.payload.sender.login} = collab? (${err})`);
             }
             // remember state
             this.issue = Object.assign({}, this.context.payload.issue, { labels: this.context.payload.issue.labels.map((label) => label.name) });
@@ -50,7 +41,9 @@ class ProbotRequest {
             this.labels = [...this.issue.labels];
             this.isBot = this.context.payload.sender.login.endsWith('[bot]');
             this.ignore = (_.intersection(this.issue.labels, this.config.ignore).length !== 0) || this.isBot;
-            this.reopen = (_.intersection(this.issue.labels.concat('*'), this.config.reopen).length !== 0) && !this.isBot;
+            this.reopen = (_.intersection(this.issue.labels.concat('*'), this.config.reopen).length !== 0)
+                && (_.intersection(this.issue.labels.map((label) => `-${label}`), this.config.reopen).length === 0)
+                && !this.isBot;
             return this;
         });
     }
@@ -66,13 +59,6 @@ class ProbotRequest {
         return __awaiter(this, void 0, void 0, function* () {
             const changed = (this.state !== this.issue.state || !_.isEqual(new Set(this.labels), new Set(this.issue.labels)));
             const msg = `${reason}(${this.context.payload.sender.login}${this.isCollaborator ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`;
-            try {
-                if (slack)
-                    slack.alert(`${msg} (changed: ${changed})`);
-            }
-            catch (err) {
-                this.robot.log('' + err);
-            }
             if (!changed)
                 return;
             this.robot.log(`${reason}(${this.context.payload.sender.login}${this.isCollaborator ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`);

@@ -11,17 +11,16 @@
     "test": "probot simulate issues test/fixtures/owner-comment.json ./index.js"
   },
   "dependencies": {
-    "@types/node": "^9.4.6",
-    "lodash": "^4.17.5",
-    "probot": "^5.0.0",
-    "slack-notify": "^0.1.6",
-    "typescript": "^2.7.2",
-    "uuid": "^3.2.1"
+    "@types/node": "^10.12.9",
+    "lodash": "^4.17.11",
+    "probot": "^7.3.1",
+    "typescript": "^3.1.6",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
-    "jest": "^21.2.1",
-    "smee-client": "^1.0.1",
-    "standard": "^10.0.3"
+    "jest": "^23.6.0",
+    "smee-client": "^1.0.2",
+    "standard": "^12.0.1"
   },
   "engines": {
     "node": ">= 7.7.0",
