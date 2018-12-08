@@ -6,15 +6,15 @@
   "license": "ISC",
   "repository": "https://github.com/retorquere/label-gun.git",
   "scripts": {
-    "start": "probot run ./build/index.js",
+    "start": "probot receive ./build/index.js",
     "build": "tsc --module commonjs --outDir build/ --noImplicitAny --sourceMap --target es2016 index.ts",
-    "test": "probot simulate issues test/fixtures/owner-comment.json ./index.js"
+    "test": "probot receive -e issues -p test/fixtures/owner-comment.json ./index.js"
   },
   "dependencies": {
-    "@types/node": "^10.12.9",
+    "@types/node": "^10.12.12",
     "lodash": "^4.17.11",
-    "probot": "^7.3.1",
-    "typescript": "^3.1.6",
+    "probot": "^7.4.0",
+    "typescript": "^3.2.2",
     "uuid": "^3.3.2"
   },
   "devDependencies": {
