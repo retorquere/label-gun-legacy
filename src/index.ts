@@ -1,17 +1,18 @@
 const _ = require('lodash')
+import { Application } from 'probot' // eslint-disable-line no-unused-vars
 
 class ProbotRequest {
   private robot: any
   private context: any
   private issue: any
 
-  public isCollaborator: boolean
-  public isBot: boolean
-  public reopen: boolean
-  public ignore: boolean
+  public isCollaborator = false
+  public isBot = false
+  public reopen = false
+  public ignore = false
 
-  public state: string
-  public labels: Array<string>
+  public state = ''
+  public labels: Array<string> = []
 
   public config: {
     feedback: string
@@ -22,6 +23,11 @@ class ProbotRequest {
   constructor(robot: any, context: any) {
     this.robot = robot
     this.context = context
+    this.config = {
+      feedback: '',
+      ignore: [],
+      reopen: [],
+    }
   }
 
   public async load() {
@@ -79,7 +85,7 @@ class ProbotRequest {
   }
 }
 
-module.exports = async (robot: any) => {
+export = (robot: Application) => {
   // Your code here
   robot.log('Yay, the app was loaded!')
 
