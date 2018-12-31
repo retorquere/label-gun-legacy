@@ -75,7 +75,7 @@ class ProbotRequest {
     if (!changed) return
 
     this.robot.log(`${reason}(${this.context.payload.sender.login}${this.isCollaborator ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`)
-    await this.context.github.issues.edit(this.context.issue({ state: this.state, labels: this.labels }))
+    await this.context.github.issues.update(this.context.issue({ state: this.state, labels: this.labels }))
   }
 }
 

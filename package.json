@@ -11,7 +11,7 @@
     "test": "probot receive -e issues -p test/fixtures/owner-comment.json ./index.js"
   },
   "dependencies": {
-    "@types/node": "^10.12.12",
+    "@types/node": "^10.12.18",
     "lodash": "^4.17.11",
     "probot": "^7.4.0",
     "typescript": "^3.2.2",
