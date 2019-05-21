@@ -13,9 +13,11 @@ class ProbotRequest {
 
   public state = ''
   public labels: Array<string> = []
+  public body: string = ''
 
   public config: {
     feedback: string
+    no_debug_id: string
     ignore: Array<string>
     reopen: Array<string>
   }
@@ -25,6 +27,7 @@ class ProbotRequest {
     this.context = context
     this.config = {
       feedback: '',
+      no_debug_id: '',
       ignore: [],
       reopen: [],
     }
@@ -40,10 +43,11 @@ class ProbotRequest {
       this.robot.log(err)
       config = null
     }
-    this.config = config || { ignore: [], reopen: [], feedback: '' }
+    this.config = config || { no_debug_id: '', ignore: [], reopen: [], feedback: '' }
     this.config.feedback = this.config.feedback || 'awaiting-user-feedback'
     this.config.ignore = this.config.ignore || []
     this.config.reopen = this.config.reopen || []
+    this.config.no_debug_id = this.config.no_debug_id || ''
 
     try {
       this.isCollaborator = await this.context.github.repos.checkCollaborator({...this.context.repo(), username: this.context.payload.sender.login})
@@ -54,6 +58,7 @@ class ProbotRequest {
     // remember state
     this.issue = { ...this.context.payload.issue, labels: this.context.payload.issue.labels.map((label: any) => label.name) }
     this.state = this.issue.state
+    this.body = this.issue.body || ''
     this.labels = [...this.issue.labels]
 
     this.isBot = this.context.payload.sender.login.endsWith('[bot]')
@@ -94,6 +99,18 @@ export = (robot: Application) => {
 
   // To get your app running against GitHub, see:
   // https://probot.github.io/docs/development/
+
+  robot.on('issues.opened', async (context: any) => {
+    const req = await (new ProbotRequest(robot, context)).load()
+
+    if (req.isBot || req.isCollaborator) return
+
+    if (req.config.no_debug_id && !req.labels.length || (!req.labels.includes('question') && !req.body.match(/\b[A-Z0-9]{8}-(euc|apse)\b/))) {
+      req.label(req.config.feedback)
+      await req.save('issues.opened')
+      await context.github.issues.createComment(context.issue({ body: req.config.no_debug_id }))
+    }
+  })
 
   robot.on('issue_comment.created', async (context: any) => {
     const req = await (new ProbotRequest(robot, context)).load()
