@@ -105,10 +105,10 @@ export = (robot: Application) => {
 
     if (req.isBot || req.isCollaborator) return
 
-    if (req.config.no_debug_id && !req.labels.length || (!req.labels.includes('question') && !req.body.match(/\b[A-Z0-9]{8}-(euc|apse)\b/))) {
+    if (!req.labels.includes('question') && !req.body.match(/\b[A-Z0-9]{8}-(euc|apse)\b/)) { // questions don't require a debug ID
       req.label(req.config.feedback)
       await req.save('issues.opened')
-      await context.github.issues.createComment(context.issue({ body: req.config.no_debug_id }))
+      if (req.config.no_debug_id) await context.github.issues.createComment(context.issue({ body: req.config.no_debug_id }))
     }
   })
 
