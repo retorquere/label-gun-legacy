@@ -107,7 +107,6 @@ export = (robot: Application) => {
 
     if (!req.config.no_debug_id) return
     if (req.labels.includes('question')) return
-    if (req.labels.includes('enhancement')) return
     if (req.body.match(/\b[A-Z0-9]{8}-(euc|apse)\b/)) return
 
     req.label(req.config.feedback)
