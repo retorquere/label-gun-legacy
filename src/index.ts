@@ -1,5 +1,5 @@
-const _ = require('lodash')
-import { Application } from 'probot' // eslint-disable-line no-unused-vars
+import { Application } from 'probot'
+const _ = require('lodash') // eslint-disable-line no-unused-vars
 
 class ProbotRequest {
   private robot: any
@@ -22,18 +22,18 @@ class ProbotRequest {
     reopen: Array<string>
   }
 
-  constructor(robot: any, context: any) {
+  constructor (robot: any, context: any) {
     this.robot = robot
     this.context = context
     this.config = {
       feedback: '',
       no_debug_id: '',
       ignore: [],
-      reopen: [],
+      reopen: []
     }
   }
 
-  public async load() {
+  public async load () {
     // load config
     let config
     try {
@@ -50,7 +50,7 @@ class ProbotRequest {
     this.config.no_debug_id = this.config.no_debug_id || ''
 
     try {
-      this.isCollaborator = await this.context.github.repos.checkCollaborator({...this.context.repo(), username: this.context.payload.sender.login})
+      this.isCollaborator = await this.context.github.repos.checkCollaborator({ ...this.context.repo(), username: this.context.payload.sender.login })
     } catch (err) {
       this.robot.log(`${this.context.payload.sender.login} = collab? (${err})`)
     }
@@ -63,23 +63,23 @@ class ProbotRequest {
 
     this.isBot = this.context.payload.sender.login.endsWith('[bot]')
     this.ignore = (_.intersection(this.issue.labels, this.config.ignore).length !== 0) || this.isBot
-    this.reopen = (_.intersection(this.issue.labels.concat('*'), this.config.reopen).length !== 0)
-      && (_.intersection(this.issue.labels.map((label: string) => `-${label}`), this.config.reopen).length === 0)
-      && !this.isBot
+    this.reopen = (_.intersection(this.issue.labels.concat('*'), this.config.reopen).length !== 0) &&
+      (_.intersection(this.issue.labels.map((label: string) => `-${label}`), this.config.reopen).length === 0) &&
+      !this.isBot
 
     return this
   }
 
-  public label(name: string) {
+  public label (name: string) {
     if (this.labels.includes(name)) return
     this.labels.push(name)
   }
 
-  public unlabel(name: string) {
+  public unlabel (name: string) {
     this.labels = this.labels.filter(label => label !== name)
   }
 
-  public async save(reason: string) {
+  public async save (reason: string) {
     const changed = (this.state !== this.issue.state || !_.isEqual(new Set(this.labels), new Set(this.issue.labels)))
     const msg = `${reason}(${this.context.payload.sender.login}${this.isCollaborator ? '*' : ''}): ${this.issue.state}[${this.issue.labels}] -> ${this.state}[${this.labels}]`
 
@@ -105,11 +105,14 @@ export = (robot: Application) => {
 
     if (req.isBot || req.isCollaborator) return
 
-    if (!req.labels.includes('question') && !req.body.match(/\b[A-Z0-9]{8}-(euc|apse)\b/)) { // questions don't require a debug ID
-      req.label(req.config.feedback)
-      await req.save('issues.opened')
-      if (req.config.no_debug_id) await context.github.issues.createComment(context.issue({ body: req.config.no_debug_id }))
-    }
+    if (!req.config.no_debug_id) return
+    if (req.labels.includes('question')) return
+    if (req.labels.includes('enhancement')) return
+    if (req.body.match(/\b[A-Z0-9]{8}-(euc|apse)\b/)) return
+
+    req.label(req.config.feedback)
+    await req.save('issues.opened')
+    context.github.issues.createComment(context.issue({ body: req.config.no_debug_id }))
   })
 
   robot.on('issue_comment.created', async (context: any) => {
